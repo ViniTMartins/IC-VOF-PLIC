@@ -3,18 +3,43 @@ import math
 
 
 def fun_limit_y(x,y):
-    return funx(x) - (y - dy)
-def funx(x):
-    return func_ellipse(x,25,16,0,0)
-def funy(y):
-    return func_ellipse(y,16,25,0,0)
+    return funx(x,y) - y
+def funx(x,y):
+    if y > 0:
+        return func_ellipse_top(x, 16, 16, 0, 0)
+    else:
+        return func_ellipse_bottom(x, 16, 16, 0, 0)
 
-def func_ellipse(x,a,b,cx,cy):
-    if abs(x) > a:
+def funy(y,x):
+    if x > 0:
+        return func_ellipse_inverse_right(y, 16, 16, 0, 0)
+    else:
+        return func_ellipse_inverse_left(y, 16, 16, 0, 0)
+
+def func_ellipse_top(x,a,b,cx,cy):
+    if abs(x - cx) > a:
         return -100000
     root = 1 - ((x-cx) ** 2) / (a ** 2)
     y = cy + (b * math.sqrt(root))
     return y
+def func_ellipse_bottom(x,a,b,cx,cy):
+    if abs(x - cx) > a:
+        return 100000
+    root = 1 - ((x-cx) ** 2) / (a ** 2)
+    y = cy - (b * math.sqrt(root))
+    return y
+def func_ellipse_inverse_left(y,a,b,cx,cy):
+    if abs(y - cy) > b:
+        return 100000
+    root = 1 - ((y-cy) ** 2) / (b ** 2)
+    x = cx - (a * math.sqrt(root))
+    return x
+def func_ellipse_inverse_right(y,a,b,cx,cy):
+    if abs(y - cy) > b:
+        return -100000
+    root = 1 - ((y-cy) ** 2) / (b ** 2)
+    x = cx + (a * math.sqrt(root))
+    return x
 
 def simpson (func, a, b, y):
     h = ((b - a)/6)
@@ -46,39 +71,75 @@ def clasificacao (arr, iElem, jElem):
 
 
 def vof (x,y):
-    v1x = x
-    v2x = x + dx
-    v3x = x
-    v4x = x + dx
-    v1y = y
-    v2y = y
-    v3y = y - dy
-    v4y = y - dy
+    #
+    #     v1-----------------v2
+    #     |                   |
+    # dy  |                   |
+    #     |                   |
+    #     |                   |
+    #     v3-----------------v4
+    #               dx
+    v1x = x - dx/2
+    v2x = x + dx/2
+    v3x = x - dx/2
+    v4x = x + dx/2
+    v1y = y + dy/2
+    v2y = y + dy/2
+    v3y = y - dy/2
+    v4y = y - dy/2
+    bottom_y = y - dy/2
+    if v1y <= 0:
+        v1_in = v1y > funx(v1x, v1y)
+    else:
+        v1_in = v1y < funx(v1x, v1y)
+    if v2y <= 0:
+        v2_in = v2y > funx(v2x,v2y)
+    else:
+        v2_in = v2y < funx(v2x, v2y)
+    if v3y <= 0:
+        v3_in = v3y > funx(v3x,v3y)
+    else:
+        v3_in = v3y < funx(v3x, v3y)
+    if v4y <= 0:
+        v4_in = v4y > funx(v4x,v4y)
+    else:
+        v4_in = v4y < funx(v4x, v4y)
 
-    bv1 = v1y < funx(v1x)
-    bv2 = v2y < funx(v2x)
-    bv3 = v3y < funx(v3x)
-    bv4 = v4y < funx(v4x)
-    sumB = bv1 + bv2 + bv3 + bv4
+    sumB = v1_in + v2_in + v3_in + v4_in
+
     if sumB == 0 :
         return 0
-    if sumB == 4:
+    elif sumB == 4:
         return 1
-    if sumB == 2:
-        if bv1 == bv3:
-            return (abs(simpson(fun_limit_y, funy(v1y), funy(v3y), y)) + (dy * (funy(v1y) - x)))/(dx * dy)
+    elif sumB == 2:
+        if v1_in == v3_in == 1:
+            return (abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy)
+        elif v1_in == v3_in == 0:
+            return 1 - ((abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy))
+        elif v4_in == v3_in == 1:
+            return (abs(simpson(fun_limit_y, v1x, v2x, bottom_y)))/(dx * dy)
         else:
-            return (abs(simpson(fun_limit_y, v1x, v2x, y)))/(dx * dy)
-    if (sumB == 3) or (sumB == 1):
+            return 1 - (abs(simpson(fun_limit_y, v1x, v2x, bottom_y))) / (dx * dy)
 
-        if (bv1 != bv2) and (bv1 != bv3) and (bv1 != bv4):
-            return (abs(simpson(fun_limit_y, v1x, funy(v1y), y)))/(dx * dy)
-        if (bv2 != bv4) and (bv2 != bv1) and (bv2 != bv3):
-            return (abs(simpson(fun_limit_y, v2x, funy(v2y), y)))/(dx * dy)
-        if (bv3 != bv4) and (bv3 != bv1) and (bv3 != bv2):
-            return (abs(simpson(fun_limit_y, v3x, funy(v3y), y)))/(dx * dy)
+    elif sumB == 1:
+
+        if (v1_in != v2_in) and (v1_in != v3_in) and (v1_in != v4_in):
+            return 1 - (((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy))
+        elif (v2_in != v4_in) and (v2_in != v1_in) and (v2_in != v3_in):
+            return 1 - (((abs(simpson(fun_limit_y, v2x, funy(v2y, v2y), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy))
+        elif (v3_in != v4_in) and (v3_in != v1_in) and (v3_in != v2_in):
+            return (abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y)))/(dx * dy)
         else:
-            return (abs(simpson(fun_limit_y, v4x, funy(v4y), y)))/(dx * dy)
+            return (abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y)))/(dx * dy)
+    elif sumB == 3:
+        if (v1_in != v2_in) and (v1_in != v3_in) and (v1_in != v4_in):
+            return ((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy)
+        elif (v2_in != v4_in) and (v2_in != v1_in) and (v2_in != v3_in):
+            return ((abs(simpson(fun_limit_y, v2x, funy(v2y, v2x), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy)
+        elif (v3_in != v4_in) and (v3_in != v1_in) and (v3_in != v2_in):
+            return 1 - ((abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y))) / (dx * dy))
+        else:
+            return 1 - ((abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y))) / (dx * dy))
     else:
         return -1
 
@@ -89,18 +150,29 @@ def vof (x,y):
 
 
 if __name__ == '__main__':
+
+    #X and Y values for each cell
+    #     |-------------------|
+    #     |                   |
+    # dy  |                   |
+    #     |                   |
+    #     |                   |
+    #     |-------------------|
+    #               dx
     dx = 2
     dy = 2
-    n = 12
-    arr = np.array([])
-    linhas = []
+    n_x = 12
+    n_y = 12
+    off_center_x = 0
+    off_center_y = -10
+    matrix = np.zeros((n_y, n_x))
 
-    for i in range(n):
-        for j in range(n):
-            arr = np.append(arr, round(vof((dx * j), ((n * dy) - (dy * i))),1))
-        linhas.append(arr)
-        arr = np.array([])
-    matrix = np.vstack(linhas)
+    for i in range(n_y):
+        for j in range(n_x):
+            x_cell = ((dx * j) + dx/2) + off_center_x
+            y_cell = (n_y * dy) - (dy * i) - dy/2 + off_center_y
+            matrix[i,j] = round(vof(x_cell,y_cell),1)
+
     print(matrix)
     print(np.shape(matrix))
 
