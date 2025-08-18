@@ -14,7 +14,7 @@ def check_in(x,y):
 
 def func_ellipse(x,a,b,cx,cy,y_cell):
     if abs(x - cx) > a:
-        return None
+        return float("inf")
     root = 1 - ((x-cx) ** 2) / (a ** 2)
     y = cy + (b * math.sqrt(root))
     if abs(y - y_cell) > dy:
@@ -24,7 +24,7 @@ def func_ellipse(x,a,b,cx,cy,y_cell):
 def inside_ellipse(x,y,a,b,cx,cy):
     part_x = (((x-cx)/a) ** 2)
     part_y = (((y-cy)/b) ** 2)
-    if part_x + part_y <= 1:
+    if part_x + part_y <= 1 + 1e-12:
         return True
     else:
         return False
@@ -74,11 +74,11 @@ def calc_area (function, ini_x, final_x, orientation, inner, bottom_y, area_rect
     if orientation == 'L':
         result = abs(simpson(function, ini_x, final_x, bottom_y))
     elif orientation == 'U':
-        result = abs(simpson(function, ini_x, final_x, bottom_y) - (abs(abs(final_x) - abs(ini_x))) * dy)
+        result = (abs(abs(final_x) - abs(ini_x))) * dy - abs(simpson(function, ini_x, final_x, (bottom_y + dx)))
     else:
         result = 0
 
-    result_norm = (result + area_rectangle) / (dx * dy)
+    result_norm = abs((result + area_rectangle) / (dx * dy))
     if inner:
         return result_norm
     else:
@@ -319,8 +319,8 @@ def vof (x,y):
             #     |          \#########|
             #      ----------|---------
             # return 1 - ((abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y))) / (dx * dy))
-            ini_x = funy(lower_y, x)
-            final_x = right_x
+            ini_x = left_x
+            final_x = funy(lower_y, x)
             orientation = 'L'
             inner = False
 
@@ -363,7 +363,7 @@ if __name__ == '__main__':
     n_x = 10
     n_y = 10
     off_center_x = -16
-    off_center_y = -16
+    off_center_y = 0
     matrix = np.zeros((n_y, n_x))
 
     for i in range(n_y):
