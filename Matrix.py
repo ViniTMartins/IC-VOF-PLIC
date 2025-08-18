@@ -2,26 +2,34 @@ import numpy as np
 import math
 
 
-def fun_limit_y(x,y):
-    return funx(x,y) - y
-def funx(x,y):
-    if y > 0:
-        return func_ellipse_top(x, 16, 16, 0, 0)
-    else:
-        return func_ellipse_bottom(x, 16, 16, 0, 0)
+def fun_limit_y(x,bottom_y):
+    return funx(x,(bottom_y + dy/2)) - bottom_y
+def funx(x,y_cell):
+    return func_ellipse(x, 16, 16, 0, 0, y_cell)
 
-def funy(y,x):
-    if x > 0:
-        return func_ellipse_inverse_right(y, 16, 16, 0, 0)
-    else:
-        return func_ellipse_inverse_left(y, 16, 16, 0, 0)
+def funy(y,x_cell):
+    return func_ellipse(y, 16, 16, 0, 0, x_cell)
+def check_in(x,y):
+    return inside_ellipse(x,y, 16,16,0,0)
 
-def func_ellipse_top(x,a,b,cx,cy):
+def func_ellipse(x,a,b,cx,cy,y_cell):
     if abs(x - cx) > a:
-        return -100000
+        return None
     root = 1 - ((x-cx) ** 2) / (a ** 2)
     y = cy + (b * math.sqrt(root))
+    if abs(y - y_cell) > dy:
+        return y - 2 * (y - cy)
     return y
+
+def inside_ellipse(x,y,a,b,cx,cy):
+    part_x = (((x-cx)/a) ** 2)
+    part_y = (((y-cy)/b) ** 2)
+    if part_x + part_y <= 1:
+        return True
+    else:
+        return False
+
+"""
 def func_ellipse_bottom(x,a,b,cx,cy):
     if abs(x - cx) > a:
         return 100000
@@ -40,12 +48,41 @@ def func_ellipse_inverse_right(y,a,b,cx,cy):
     root = 1 - ((y-cy) ** 2) / (b ** 2)
     x = cx + (a * math.sqrt(root))
     return x
+"""
 
 def simpson (func, a, b, y):
     h = ((b - a)/6)
     x = h * (func(a,y) + (4 * func((a + b)/2, y)) + func(b,y))
     return x
 
+def calc_area (function, ini_x, final_x, orientation, inner, bottom_y, area_rectangle):
+    #     ---------------------
+    #     |################### | <- orientation = upper
+    #     |###############     |
+    #     |##########          |
+    #     |#####               |
+    #     |##                  |
+    #     ---------------------
+    #
+    #     ---------------------
+    #     |         ##########| <- orientation = lower
+    #     |       ############|
+    #     |      #############|
+    #     |   ################|
+    #     |###################|
+    #      --------------------
+    if orientation == 'L':
+        result = abs(simpson(function, ini_x, final_x, bottom_y))
+    elif orientation == 'U':
+        result = abs(simpson(function, ini_x, final_x, bottom_y) - (abs(abs(final_x) - abs(ini_x))) * dy)
+    else:
+        result = 0
+
+    result_norm = (result + area_rectangle) / (dx * dy)
+    if inner:
+        return result_norm
+    else:
+        return 1 - result_norm
 
 
 def clasificacao (arr, iElem, jElem):
@@ -72,76 +109,238 @@ def clasificacao (arr, iElem, jElem):
 
 def vof (x,y):
     #
-    #     v1-----------------v2
-    #     |                   |
-    # dy  |                   |
+    #     v1-----------------v2 <- upper_x
     #     |                   |
     #     |                   |
-    #     v3-----------------v4
-    #               dx
-    v1x = x - dx/2
-    v2x = x + dx/2
-    v3x = x - dx/2
-    v4x = x + dx/2
-    v1y = y + dy/2
-    v2y = y + dy/2
-    v3y = y - dy/2
-    v4y = y - dy/2
-    bottom_y = y - dy/2
-    if v1y <= 0:
-        v1_in = v1y > funx(v1x, v1y)
-    else:
-        v1_in = v1y < funx(v1x, v1y)
-    if v2y <= 0:
-        v2_in = v2y > funx(v2x,v2y)
-    else:
-        v2_in = v2y < funx(v2x, v2y)
-    if v3y <= 0:
-        v3_in = v3y > funx(v3x,v3y)
-    else:
-        v3_in = v3y < funx(v3x, v3y)
-    if v4y <= 0:
-        v4_in = v4y > funx(v4x,v4y)
-    else:
-        v4_in = v4y < funx(v4x, v4y)
+    #  dy |       (x,y)       |
+    #     |                   |
+    #     |                   |
+    #     v3-----------------v4 <- bottom_y
+    #     ^         dx        ^
+    #     |                   |
+    #     left_x              right_x
+    #
+    # v1 = (upper_y,left_x)
+    # v2 = (upper_y,right_x)
+    # v3 = (lower_y,left_x)
+    # v4 = (lower_y,right_x)
+    #
+
+    lower_y = y - dy/2
+    upper_y = y + dy/2
+    left_x = x - dx/2
+    right_x = x + dx/2
+
+    v1_in = check_in(left_x, upper_y)
+    v2_in = check_in(right_x, upper_y)
+    v3_in = check_in(left_x, lower_y)
+    v4_in = check_in(right_x, lower_y)
 
     sumB = v1_in + v2_in + v3_in + v4_in
 
+    area_rectangle = 0
+
     if sumB == 0 :
+        #     ---------------------
+        #     |                    |
+        #     |                    |
+        #     |                    |
+        #     |                    |
+        #     |                    |
+        #      ---------------------
         return 0
     elif sumB == 4:
+        #     ---------------------
+        #     |####################|
+        #     |####################|
+        #     |####################|
+        #     |####################|
+        #     |####################|
+        #      ---------------------
         return 1
     elif sumB == 2:
         if v1_in == v3_in == 1:
-            return (abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy)
+            #     -----------|---------
+            #     |##########|         |
+            #     |##########|         |
+            #     |##########|         |
+            #     |##########|         |
+            #     |##########|         |
+            #      ----------|----------
+
+            #return (abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy)
+            ini_x = funy(upper_y, x)
+            final_x = funy(lower_y, x)
+            area_rectangle = (min(ini_x, final_x) - left_x) * dy
+            # unecessary for this case
+            orientation = 'L'
+            inner = True
+
         elif v1_in == v3_in == 0:
-            return 1 - ((abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy))
+            #     -----------|---------
+            #     |          |#########|
+            #     |          |#########|
+            #     |          |#########|
+            #     |          |#########|
+            #     |          |#########|
+            #      ----------|----------
+
+            # return 1 - ((abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy))
+            ini_x = funy(upper_y, x)
+            final_x = funy(lower_y, x)
+            area_rectangle = (right_x - max(ini_x, final_x)) * dy
+            # unecessary for this case
+            orientation = 'L'
+            inner = True
         elif v4_in == v3_in == 1:
-            return (abs(simpson(fun_limit_y, v1x, v2x, bottom_y)))/(dx * dy)
+            #     ---------------------
+            #     |                    |
+            #     |                    |
+            #     ----------------------
+            #     |####################|
+            #     |####################|
+            #      ---------------------
+
+            # return (abs(simpson(fun_limit_y, v1x, v2x, bottom_y)))/(dx * dy)
+            ini_x = left_x
+            final_x = right_x
+            orientation = 'L'
+            # unecessary for this case
+            inner = True
         else:
-            return 1 - (abs(simpson(fun_limit_y, v1x, v2x, bottom_y))) / (dx * dy)
+            #     ---------------------
+            #     |####################|
+            #     |####################|
+            #     ----------------------
+            #     |                    |
+            #     |                    |
+            #      ---------------------
+            # return 1 - (abs(simpson(fun_limit_y, v1x, v2x, bottom_y))) / (dx * dy)
+            ini_x = left_x
+            final_x = right_x
+            orientation = 'U'
+            # unecessary for this case
+            inner = True
 
     elif sumB == 1:
 
         if (v1_in != v2_in) and (v1_in != v3_in) and (v1_in != v4_in):
-            return 1 - (((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy))
+            #     ----------|----------
+            #     |#########/          |
+            #     ----------           |
+            #     |                    |
+            #     |                    |
+            #     |                    |
+            #      ---------------------
+            # return 1 - (((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy))
+            ini_x = left_x
+            final_x = funy(upper_y, x)
+            orientation = 'U'
+            inner = True
+
         elif (v2_in != v4_in) and (v2_in != v1_in) and (v2_in != v3_in):
-            return 1 - (((abs(simpson(fun_limit_y, v2x, funy(v2y, v2y), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy))
+            #     ----------|-----------
+            #     |         \##########|
+            #     |          -----------
+            #     |                    |
+            #     |                    |
+            #     |                    |
+            #      ---------------------
+            # return 1 - (((abs(simpson(fun_limit_y, v2x, funy(v2y, v2y), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy))
+            ini_x = funy(upper_y, x)
+            final_x = right_x
+            orientation = 'U'
+            inner = True
+
         elif (v3_in != v4_in) and (v3_in != v1_in) and (v3_in != v2_in):
-            return (abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y)))/(dx * dy)
+            #     ---------------------
+            #     |                    |
+            #     |                    |
+            #     |                    |
+            #     -----------          |
+            #     |##########\         |
+            #      ----------|---------
+            # return (abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y)))/(dx * dy)
+            ini_x = left_x
+            final_x = funy(lower_y, x)
+            orientation = 'L'
+            inner = True
+
         else:
-            return (abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y)))/(dx * dy)
+            #     ---------------------
+            #     |                    |
+            #     |                    |
+            #     |                    |
+            #     |           ----------
+            #     |          /#########|
+            #      ----------|----------
+            # return (abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y)))/(dx * dy)
+            ini_x = funy(lower_y, x)
+            final_x = right_x
+            orientation = 'L'
+            inner = True
     elif sumB == 3:
+
         if (v1_in != v2_in) and (v1_in != v3_in) and (v1_in != v4_in):
-            return ((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy)
+            #     ----------|----------
+            #     |         /##########|
+            #     ----------###########|
+            #     |####################|
+            #     |####################|
+            #     |####################|
+            #      ---------------------
+            # return ((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy)
+            ini_x = left_x
+            final_x = funy(upper_y, x)
+            orientation = 'U'
+            inner = False
+
+
         elif (v2_in != v4_in) and (v2_in != v1_in) and (v2_in != v3_in):
-            return ((abs(simpson(fun_limit_y, v2x, funy(v2y, v2x), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy)
+            #     ----------|-----------
+            #     |#########\          |
+            #     |##########-----------
+            #     |####################|
+            #     |####################|
+            #     |####################|
+            #      ---------------------
+            # return ((abs(simpson(fun_limit_y, v2x, funy(v2y, v2x), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy)
+            ini_x = funy(upper_y, x)
+            final_x = right_x
+            orientation = 'U'
+            inner = False
+
         elif (v3_in != v4_in) and (v3_in != v1_in) and (v3_in != v2_in):
-            return 1 - ((abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y))) / (dx * dy))
+            #     ---------------------
+            #     |####################|
+            #     |####################|
+            #     |####################|
+            #     -----------##########|
+            #     |          \#########|
+            #      ----------|---------
+            # return 1 - ((abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y))) / (dx * dy))
+            ini_x = funy(lower_y, x)
+            final_x = right_x
+            orientation = 'L'
+            inner = False
+
         else:
-            return 1 - ((abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y))) / (dx * dy))
+            #     ---------------------
+            #     |####################|
+            #     |####################|
+            #     |####################|
+            #     |###########----------
+            #     |##########/         |
+            #      ----------|----------
+            #  return 1 - ((abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y))) / (dx * dy))
+            ini_x = funy(lower_y, x)
+            final_x = right_x
+            orientation = 'L'
+            inner = False
     else:
         return -1
+
+    return calc_area(fun_limit_y, ini_x, final_x, orientation, inner, lower_y, area_rectangle)
 
 
 
@@ -161,17 +360,17 @@ if __name__ == '__main__':
     #               dx
     dx = 2
     dy = 2
-    n_x = 12
-    n_y = 12
-    off_center_x = 0
-    off_center_y = -10
+    n_x = 10
+    n_y = 10
+    off_center_x = -16
+    off_center_y = -16
     matrix = np.zeros((n_y, n_x))
 
     for i in range(n_y):
         for j in range(n_x):
-            x_cell = ((dx * j) + dx/2) + off_center_x
-            y_cell = (n_y * dy) - (dy * i) - dy/2 + off_center_y
-            matrix[i,j] = round(vof(x_cell,y_cell),1)
+            x_center_of_cell = ((dx * j) + dx/2) + off_center_x
+            y_center_of_cell = ((dy * i) + dy/2) + off_center_y
+            matrix[i,j] = round(vof(x_center_of_cell,y_center_of_cell),1)
 
     print(matrix)
     print(np.shape(matrix))
