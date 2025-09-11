@@ -1,16 +1,25 @@
 import numpy as np
+from sympy import symbols, diff
 import math
 
+
+def get_params():
+    #return [a, b, cx, cy]
+    params = [5,5,0,0]
+    return params
 
 def fun_limit_y(x,bottom_y, y_cell,dx,dy):
     return funx(x,y_cell, dx,dy) - bottom_y
 def funx(x,y_cell,dx,dy):
-    return func_ellipse(x, 16, 16, 0, 0, y_cell, dx,dy)
+    arr = get_params()
+    return func_ellipse(x, arr[0], arr[1], arr[2], arr[3], y_cell, dx,dy)
 
 def funy(y,x_cell, dx,dy):
-    return func_ellipse(y, 16, 16, 0, 0, x_cell, dx,dy)
+    arr = get_params()
+    return func_ellipse(y, arr[1], arr[0], arr[3], arr[2], x_cell, dx,dy)
 def check_in(x,y, dx,dy):
-    return inside_ellipse(x,y, 16,16,0,0, dx,dy)
+    arr = get_params()
+    return inside_ellipse(x,y, arr[0], arr[1], arr[2], arr[3], dx,dy)
 
 def func_ellipse(x,a,b,cx,cy,y_cell,dx,dy):
     if abs(x - cx) > a:
@@ -116,7 +125,7 @@ def vof (x,y, dx,dy):
     #  dy |       (x,y)       |
     #     |                   |
     #     |                   |
-    #     v3-----------------v4 <- bottom_y
+    #     v 3-----------------v4 <- bottom_y
     #     ^         dx        ^
     #     |                   |
     #     left_x              right_x
@@ -348,7 +357,7 @@ def vof (x,y, dx,dy):
     return calc_area(fun_limit_y, ini_x, final_x, orientation, inner, lower_y, y, area_rectangle, dx,dy)
 
 
-def classificacao (matrix):
+def classificacao (matrix, method):
 
     n_y, n_x = matrix.shape
 
@@ -383,6 +392,101 @@ def classificacao (matrix):
 
     return matrix_classificacao
 
+def normal(x_cell, y_cell,i,j, classificacao):
+    x, y = symbols('x, y', real=True)
+    params = get_params()
+    f = (x - params[2])**2/params[0]**2 + (y - params[3])**2/params[1]**2 - 1
+    pdfx = diff(f, x)
+    pdfy = diff(f, y)
+    if classificacao[i, j] == 'I':
+        return pdfx.subs({x: x_cell, y: y_cell}), pdfy.subs({x: x_cell, y: y_cell})
+    else:
+        return 0,0
+
+
+
+
+def salvar_vtk_celula(
+    caminho_arquivo: str,
+    campo_escalar: np.ndarray,
+    campo_vetorial: np.ndarray,
+    nx: int,
+    ny: int,
+    dx: float,
+    dy: float,
+    cx: float,
+    cy: float,
+    nome_campo: str = "campo_escalar",
+    nome_vetorial: str = "Normals"
+):
+    """
+    Salva um campo escalar 2D associado às células de uma malha estruturada
+    regular em um arquivo de formato VTK (legacy ASCII).
+
+    Args:
+        caminho_arquivo (str): O caminho completo para o arquivo de saída (ex: 'dados.vtk').
+        campo_escalar (np.ndarray): Matriz 2D com os valores do campo escalar.
+                                    A dimensão deve ser (ny, nx).
+        nx (int): Número de pontos na direção x.
+        ny (int): Número de pontos na direção y.
+        dx (float): Espaçamento entre os pontos na direção x.
+        dy (float): Espaçamento entre os pontos na direção y.
+        cx (float): Coordenada x da origem da malha (canto inferior esquerdo).
+        cy (float): Coordenada y da origem da malha (canto inferior esquerdo).
+        nome_campo (str, optional): Nome do campo escalar a ser salvo no arquivo VTK.
+                                    Padrão é "campo_escalar".
+    """
+    # Validação das dimensões do campo escalar
+    num_celulas_y, num_celulas_x = campo_escalar.shape
+    if num_celulas_x != nx or num_celulas_y != ny :
+        raise ValueError(
+            f"A dimensão do campo escalar ({num_celulas_y}, {num_celulas_x}) "
+            f"não é compatível com o número de células ({ny}, {nx})."
+        )
+
+    num_celulas = nx * ny
+
+    try:
+        with open(caminho_arquivo, 'w') as f:
+            # --- 1. Cabeçalho VTK ---
+            f.write("# vtk DataFile Version 3.0\n")
+            f.write(f"Malha 2D Estruturada - {nome_campo}\n")
+            f.write("ASCII\n")
+            f.write("DATASET STRUCTURED_POINTS\n")
+
+            # --- 2. Informação Geométrica/Topológica ---
+            # Dimensões (número de PONTOS)
+            f.write(f"DIMENSIONS {nx} {ny} 1\n")
+            # Origem da malha (coordenada do primeiro ponto)
+            f.write(f"ORIGIN {cx} {cy} 0.0\n")
+            # Espaçamento entre os pontos
+            f.write(f"SPACING {dx} {dy} 1.0\n")
+
+            # --- 3. Dados das Células ---
+            f.write(f"\nPOINT_DATA {num_celulas}\n")
+            # Definição do campo escalar
+            f.write(f"SCALARS {nome_campo} float 1\n")
+            f.write("LOOKUP_TABLE default\n")
+
+            # --- 4. Escrita dos dados ---
+            # O VTK espera que os dados sejam escritos com o índice x variando mais
+            # rapidamente. O método flatten() do numpy com a ordem 'C' (padrão)
+            # faz exatamente isso.
+            campo_achatado = campo_escalar.flatten(order='C')
+            for valor in campo_achatado:
+                f.write(f"{valor}\n")
+
+            """f.write(f"\nVECTORS {nome_vetorial} float\n")
+            campo_vec_flat = campo_vetorial.reshape(-1, 2)  # (nx*ny, 2)
+            for vx, vy in campo_vec_flat:
+                f.write(f"{vx} {vy} 0.0\n")"""
+
+        print(f"Arquivo '{caminho_arquivo}' salvo com sucesso!")
+
+    except IOError as e:
+        print(f"Erro ao escrever o arquivo '{caminho_arquivo}': {e}")
+
+
 
 
 
@@ -396,28 +500,39 @@ def inicio():
     #     |                   |
     #     |-------------------|
     #               dx
-    dx = 2
-    dy = 2
-    n_x = 10
-    n_y = 10
-    off_center_x = -16
-    off_center_y = 0
+    dx = 0.5
+    dy = 0.5
+    n_x = 100
+    n_y = 100
+    off_center_x = -4
+    off_center_y = -10
     matrix = np.zeros((n_y, n_x))
+    normals = np.empty((n_y, n_x), dtype='object')
+
 
     for i in range(n_y):
         for j in range(n_x):
             x_center_of_cell = ((dx * j) + dx / 2) + off_center_x
             y_center_of_cell = ((dy * i) + dy / 2) + off_center_y
-            matrix[i, j] = round(vof(x_center_of_cell, y_center_of_cell, dx,dy), 1)
+            matrix[i, j] = vof(x_center_of_cell, y_center_of_cell, dx,dy)
+
 
     print(matrix)
     print(np.shape(matrix))
 
-    classificacao_matrix = classificacao(matrix)
+    classificacao_matrix = classificacao(matrix, 'matrix')
+
+    for i in range(n_y):
+        for j in range(n_x):
+            x_center_of_cell = ((dx * j) + dx / 2) + off_center_x
+            y_center_of_cell = ((dy * i) + dy / 2) + off_center_y
+            normals[i, j] = normal(x_center_of_cell, y_center_of_cell, i, j, classificacao_matrix)
 
     print(classificacao_matrix)
+    print(normals)
 
-
+    salvar_vtk_celula("output.vtk", matrix, normals, n_x, n_y, dx, dy, off_center_x, off_center_y, "Volume_Fraction", "Normals"
+    )
 
 
 if __name__ == '__main__':
