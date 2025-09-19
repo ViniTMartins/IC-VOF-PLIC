@@ -4,39 +4,48 @@ import math
 
 
 def get_params():
-    #return [a, b, cx, cy]
-    params = [5,5,0,0]
+    # return [a, b, cx, cy]
+    params = [5, 5, 0, 0]
     return params
 
-def fun_limit_y(x,bottom_y, y_cell,dx,dy):
-    return funx(x,y_cell, dx,dy) - bottom_y
-def funx(x,y_cell,dx,dy):
-    arr = get_params()
-    return func_ellipse(x, arr[0], arr[1], arr[2], arr[3], y_cell, dx,dy)
 
-def funy(y,x_cell, dx,dy):
-    arr = get_params()
-    return func_ellipse(y, arr[1], arr[0], arr[3], arr[2], x_cell, dx,dy)
-def check_in(x,y, dx,dy):
-    arr = get_params()
-    return inside_ellipse(x,y, arr[0], arr[1], arr[2], arr[3], dx,dy)
+def fun_limit_y(x, bottom_y, y_cell, dx, dy):
+    return funx(x, y_cell, dx, dy) - bottom_y
 
-def func_ellipse(x,a,b,cx,cy,y_cell,dx,dy):
+
+def funx(x, y_cell, dx, dy):
+    arr = get_params()
+    return func_ellipse(x, arr[0], arr[1], arr[2], arr[3], y_cell, dx, dy)
+
+
+def funy(y, x_cell, dx, dy):
+    arr = get_params()
+    return func_ellipse(y, arr[1], arr[0], arr[3], arr[2], x_cell, dx, dy)
+
+
+def check_in(x, y, dx, dy):
+    arr = get_params()
+    return inside_ellipse(x, y, arr[0], arr[1], arr[2], arr[3], dx, dy)
+
+
+def func_ellipse(x, a, b, cx, cy, y_cell, dx, dy):
     if abs(x - cx) > a:
         return float("inf")
-    root = 1 - ((x-cx) ** 2) / (a ** 2)
+    root = 1 - ((x - cx) ** 2) / (a ** 2)
     y = cy + (b * math.sqrt(root))
     if abs(y - y_cell) > dy:
         return y - 2 * (y - cy)
     return y
 
-def inside_ellipse(x,y,a,b,cx,cy, dx,dy):
-    part_x = (((x-cx)/a) ** 2)
-    part_y = (((y-cy)/b) ** 2)
+
+def inside_ellipse(x, y, a, b, cx, cy, dx, dy):
+    part_x = (((x - cx) / a) ** 2)
+    part_y = (((y - cy) / b) ** 2)
     if part_x + part_y <= 1 + 1e-12:
         return True
     else:
         return False
+
 
 """
 def func_ellipse_bottom(x,a,b,cx,cy):
@@ -59,12 +68,16 @@ def func_ellipse_inverse_right(y,a,b,cx,cy):
     return x
 """
 
-def simpson (func, a, b, bottom_y,y_cell, dx,dy):
-    h = ((b - a)/6)
-    x = h * (func(a,bottom_y,y_cell, dx,dy) + (4 * func((a + b)/2, bottom_y,y_cell, dx,dy)) + func(b,bottom_y,y_cell, dx,dy))
+
+def simpson(func, a, b, bottom_y, y_cell, dx, dy):
+    h = ((b - a) / 6)
+    x = h * (func(a, bottom_y, y_cell, dx, dy) + (4 * func((a + b) / 2, bottom_y, y_cell, dx, dy)) + func(b, bottom_y,
+                                                                                                          y_cell, dx,
+                                                                                                          dy))
     return x
 
-def calc_area (function, ini_x, final_x, orientation, inner, bottom_y, y_cell, area_rectangle, dx,dy):
+
+def calc_area(function, ini_x, final_x, orientation, inner, bottom_y, y_cell, area_rectangle, dx, dy):
     #     ---------------------
     #     |################### | <- orientation = upper
     #     |###############     |
@@ -81,9 +94,9 @@ def calc_area (function, ini_x, final_x, orientation, inner, bottom_y, y_cell, a
     #     |###################|
     #      --------------------
     if orientation == 'L':
-        result = abs(simpson(function, ini_x, final_x, bottom_y, y_cell, dx,dy))
+        result = abs(simpson(function, ini_x, final_x, bottom_y, y_cell, dx, dy))
     elif orientation == 'U':
-        result = abs(simpson(function, ini_x, final_x, (bottom_y + dy), y_cell, dx,dy))
+        result = abs(simpson(function, ini_x, final_x, (bottom_y + dy), y_cell, dx, dy))
     else:
         result = 0
 
@@ -92,6 +105,7 @@ def calc_area (function, ini_x, final_x, orientation, inner, bottom_y, y_cell, a
         return result_norm
     else:
         return 1 - result_norm
+
 
 '''
 def clasificacao (arr, iElem, jElem):
@@ -117,7 +131,7 @@ def clasificacao (arr, iElem, jElem):
 '''
 
 
-def vof (x,y, dx,dy):
+def vof(x, y, dx, dy):
     #
     #     v1-----------------v2 <- upper_x
     #     |                   |
@@ -136,21 +150,21 @@ def vof (x,y, dx,dy):
     # v4 = (lower_y,right_x)
     #
 
-    lower_y = y - dy/2
-    upper_y = y + dy/2
-    left_x = x - dx/2
-    right_x = x + dx/2
+    lower_y = y - dy / 2
+    upper_y = y + dy / 2
+    left_x = x - dx / 2
+    right_x = x + dx / 2
 
-    v1_in = check_in(left_x, upper_y, dx,dy)
-    v2_in = check_in(right_x, upper_y, dx,dy)
-    v3_in = check_in(left_x, lower_y, dx,dy)
-    v4_in = check_in(right_x, lower_y, dx,dy)
+    v1_in = check_in(left_x, upper_y, dx, dy)
+    v2_in = check_in(right_x, upper_y, dx, dy)
+    v3_in = check_in(left_x, lower_y, dx, dy)
+    v4_in = check_in(right_x, lower_y, dx, dy)
 
     sumB = v1_in + v2_in + v3_in + v4_in
 
     area_rectangle = 0
 
-    if sumB == 0 :
+    if sumB == 0:
         #     ---------------------
         #     |                    |
         #     |                    |
@@ -178,9 +192,9 @@ def vof (x,y, dx,dy):
             #     |##########|         |
             #      ----------|----------
 
-            #return (abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy)
-            ini_x = funy(upper_y, x, dx,dy)
-            final_x = funy(lower_y, x, dx,dy)
+            # return (abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy)
+            ini_x = funy(upper_y, x, dx, dy)
+            final_x = funy(lower_y, x, dx, dy)
             area_rectangle = (min(ini_x, final_x) - left_x) * dy
             if min(ini_x, final_x) == final_x:
                 orientation = 'L'
@@ -198,8 +212,8 @@ def vof (x,y, dx,dy):
             #      ----------|----------
 
             # return 1 - ((abs(simpson(fun_limit_y, funy(v1y, v1x), funy(v3y, v3x), bottom_y)) + (dy * (min(funy(v1y, v1x),funy(v3y,v3x)) - v1x)))/(dx * dy))
-            ini_x = funy(upper_y, x, dx,dy)
-            final_x = funy(lower_y, x, dx,dy)
+            ini_x = funy(upper_y, x, dx, dy)
+            final_x = funy(lower_y, x, dx, dy)
             area_rectangle = (right_x - max(ini_x, final_x)) * dy
             if min(ini_x, final_x) == final_x:
                 orientation = 'U'
@@ -248,7 +262,7 @@ def vof (x,y, dx,dy):
             #      ---------------------
             # return 1 - (((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy))
             ini_x = left_x
-            final_x = funy(upper_y, x, dx,dy)
+            final_x = funy(upper_y, x, dx, dy)
             orientation = 'U'
             inner = True
 
@@ -261,7 +275,7 @@ def vof (x,y, dx,dy):
             #     |                    |
             #      ---------------------
             # return 1 - (((abs(simpson(fun_limit_y, v2x, funy(v2y, v2y), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy))
-            ini_x = funy(upper_y, x, dx,dy)
+            ini_x = funy(upper_y, x, dx, dy)
             final_x = right_x
             orientation = 'U'
             inner = True
@@ -276,7 +290,7 @@ def vof (x,y, dx,dy):
             #      ----------|---------
             # return (abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y)))/(dx * dy)
             ini_x = left_x
-            final_x = funy(lower_y, x, dx,dy)
+            final_x = funy(lower_y, x, dx, dy)
             orientation = 'L'
             inner = True
 
@@ -289,7 +303,7 @@ def vof (x,y, dx,dy):
             #     |          /#########|
             #      ----------|----------
             # return (abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y)))/(dx * dy)
-            ini_x = funy(lower_y, x, dx,dy)
+            ini_x = funy(lower_y, x, dx, dy)
             final_x = right_x
             orientation = 'L'
             inner = True
@@ -305,7 +319,7 @@ def vof (x,y, dx,dy):
             #      ---------------------
             # return ((abs(simpson(fun_limit_y, v1x, funy(v1y, v1x), bottom_y))) + (dy * (dx - (funy(v1y, v1x) - x)))) /(dx * dy)
             ini_x = left_x
-            final_x = funy(upper_y, x, dx,dy)
+            final_x = funy(upper_y, x, dx, dy)
             orientation = 'U'
             inner = False
 
@@ -319,7 +333,7 @@ def vof (x,y, dx,dy):
             #     |####################|
             #      ---------------------
             # return ((abs(simpson(fun_limit_y, v2x, funy(v2y, v2x), bottom_y))) + (dy * (funy(v1y, v1x) - x))) /(dx * dy)
-            ini_x = funy(upper_y, x, dx,dy)
+            ini_x = funy(upper_y, x, dx, dy)
             final_x = right_x
             orientation = 'U'
             inner = False
@@ -334,7 +348,7 @@ def vof (x,y, dx,dy):
             #      ----------|---------
             # return 1 - ((abs(simpson(fun_limit_y, v3x, funy(v3y, v3x), bottom_y))) / (dx * dy))
             ini_x = left_x
-            final_x = funy(lower_y, x, dx,dy)
+            final_x = funy(lower_y, x, dx, dy)
             orientation = 'L'
             inner = False
 
@@ -347,18 +361,17 @@ def vof (x,y, dx,dy):
             #     |##########/         |
             #      ----------|----------
             #  return 1 - ((abs(simpson(fun_limit_y, v4x, funy(v4y, v4x), bottom_y))) / (dx * dy))
-            ini_x = funy(lower_y, x, dx,dy)
+            ini_x = funy(lower_y, x, dx, dy)
             final_x = right_x
             orientation = 'L'
             inner = False
     else:
         return -1
 
-    return calc_area(fun_limit_y, ini_x, final_x, orientation, inner, lower_y, y, area_rectangle, dx,dy)
+    return calc_area(fun_limit_y, ini_x, final_x, orientation, inner, lower_y, y, area_rectangle, dx, dy)
 
 
-def classificacao (matrix, method):
-
+def classificacao(matrix, method):
     n_y, n_x = matrix.shape
 
     matrix_classificacao = np.empty((n_y, n_x), dtype='<U1')
@@ -372,16 +385,16 @@ def classificacao (matrix, method):
 
             elif valor == 1:
 
-                if i > 0 and matrix[i-1][j] == 0:
+                if i > 0 and matrix[i - 1][j] == 0:
                     matrix_classificacao[i][j] = 'I'
 
-                elif i < n_y - 1 and matrix[i+1][j] == 0:
+                elif i < n_y - 1 and matrix[i + 1][j] == 0:
                     matrix_classificacao[i][j] = 'I'
 
-                elif j > 0 and matrix[i][j-1] == 0:
+                elif j > 0 and matrix[i][j - 1] == 0:
                     matrix_classificacao[i][j] = 'I'
 
-                elif j < n_x - 1 and matrix[i][j+1] == 0:
+                elif j < n_x - 1 and matrix[i][j + 1] == 0:
                     matrix_classificacao[i][j] = 'I'
 
                 else:
@@ -392,32 +405,54 @@ def classificacao (matrix, method):
 
     return matrix_classificacao
 
-def normal(x_cell, y_cell,i,j, classificacao):
+
+def normal(x_cell, y_cell, i, j, classificacao):
     x, y = symbols('x, y', real=True)
     params = get_params()
-    f = (x - params[2])**2/params[0]**2 + (y - params[3])**2/params[1]**2 - 1
+    f = (x - params[2]) ** 2 / params[0] ** 2 + (y - params[3]) ** 2 / params[1] ** 2 - 1
     pdfx = diff(f, x)
     pdfy = diff(f, y)
     if classificacao[i, j] == 'I':
-        return pdfx.subs({x: x_cell, y: y_cell}), pdfy.subs({x: x_cell, y: y_cell})
+        size_vec = math.sqrt(pdfx.subs({x: x_cell, y: y_cell}) ** 2 + pdfy.subs({x: x_cell, y: y_cell}) ** 2)
+        return pdfx.subs({x: x_cell, y: y_cell}) / size_vec, pdfy.subs({x: x_cell, y: y_cell}) / size_vec
     else:
-        return 0,0
+        return 0, 0
 
+def curvature(x_cell, y_cell, i, j, classificacao, normals):
+    x = symbols('x')
+    y = symbols('y')
+    params = get_params()
+    f_x = params[3] + params[1] * math.sqrt(1 - ((x - params[2])**2) / params[0]**2)
+    f_y = params[2] + params[0] * math.sqrt(1 - ((y - params[3])**2) / params[1]**2)
+    df_dx = diff(f_x, x)
+    df_dy = diff(f_y, y)
+    ddf_ddx = diff(df_dx, x)
+    ddf_ddy = diff(df_dy, y)
+
+    if classificacao[i, j] == 'I':
+        if normals[i, j][0] > normals[i, j][1]:
+            return (ddf_ddx.subs({x: x_cell}))/ ((1 + (df_dx.subs({x: x_cell})**2)) ** (3 / 2))
+        else:
+            return (ddf_ddy.subs({y: y_cell})) / ((1 + (df_dy.subs({y: y_cell}) ** 2)) ** (3 / 2))
+    
+    else:
+        return 0
 
 
 
 def salvar_vtk_celula(
-    caminho_arquivo: str,
-    campo_escalar: np.ndarray,
-    campo_vetorial: np.ndarray,
-    nx: int,
-    ny: int,
-    dx: float,
-    dy: float,
-    cx: float,
-    cy: float,
-    nome_campo: str = "campo_escalar",
-    nome_vetorial: str = "Normals"
+        caminho_arquivo: str,
+        campo_cell_type: np.ndarray,
+        campo_escalar: np.ndarray,
+        campo_vetorial: np.ndarray,
+        nx: int,
+        ny: int,
+        dx: float,
+        dy: float,
+        cx: float,
+        cy: float,
+        nome_campo: str = "campo_escalar",
+        nome_vetorial: str = "Normals"
 ):
     """
     Salva um campo escalar 2D associado às células de uma malha estruturada
@@ -438,7 +473,7 @@ def salvar_vtk_celula(
     """
     # Validação das dimensões do campo escalar
     num_celulas_y, num_celulas_x = campo_escalar.shape
-    if num_celulas_x != nx or num_celulas_y != ny :
+    if num_celulas_x != nx or num_celulas_y != ny:
         raise ValueError(
             f"A dimensão do campo escalar ({num_celulas_y}, {num_celulas_x}) "
             f"não é compatível com o número de células ({ny}, {nx})."
@@ -476,19 +511,29 @@ def salvar_vtk_celula(
             for valor in campo_achatado:
                 f.write(f"{valor}\n")
 
-            """f.write(f"\nVECTORS {nome_vetorial} float\n")
-            campo_vec_flat = campo_vetorial.reshape(-1, 2)  # (nx*ny, 2)
-            for vx, vy in campo_vec_flat:
-                f.write(f"{vx} {vy} 0.0\n")"""
+            f.write(f"\nVECTORS {nome_vetorial} float\n")
+            campo_vec_flat = campo_vetorial.flatten(order='C')  # (nx*ny, 2)
+            for valor in campo_vec_flat:
+                f.write(f"{valor[0]} {valor[1]} 0.0\n")
+
+            # --- Escrita dos dados ---
+            f.write(f"SCALARS cell_type int 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            cell_type = campo_cell_type.flatten(order='C')
+            for valor in cell_type:
+                if (valor == 'I'):
+                    f.write(f"2\n")
+                elif (valor == 'F'):
+                    f.write(f"1\n")
+                elif (valor == 'V'):
+                    f.write(f"0\n")
+                else:
+                    print("Error save vtk\n")
 
         print(f"Arquivo '{caminho_arquivo}' salvo com sucesso!")
 
     except IOError as e:
         print(f"Erro ao escrever o arquivo '{caminho_arquivo}': {e}")
-
-
-
-
 
 
 def inicio():
@@ -500,22 +545,20 @@ def inicio():
     #     |                   |
     #     |-------------------|
     #               dx
-    dx = 0.5
-    dy = 0.5
+    dx = 0.25
+    dy = 0.25
     n_x = 100
     n_y = 100
-    off_center_x = -4
-    off_center_y = -10
+    off_center_x = -12.5
+    off_center_y = -12.5
     matrix = np.zeros((n_y, n_x))
     normals = np.empty((n_y, n_x), dtype='object')
-
 
     for i in range(n_y):
         for j in range(n_x):
             x_center_of_cell = ((dx * j) + dx / 2) + off_center_x
             y_center_of_cell = ((dy * i) + dy / 2) + off_center_y
-            matrix[i, j] = vof(x_center_of_cell, y_center_of_cell, dx,dy)
-
+            matrix[i, j] = vof(x_center_of_cell, y_center_of_cell, dx, dy)
 
     print(matrix)
     print(np.shape(matrix))
@@ -531,8 +574,9 @@ def inicio():
     print(classificacao_matrix)
     print(normals)
 
-    salvar_vtk_celula("output.vtk", matrix, normals, n_x, n_y, dx, dy, off_center_x, off_center_y, "Volume_Fraction", "Normals"
-    )
+    salvar_vtk_celula("output.vtk", classificacao_matrix, matrix, normals, n_x, n_y, dx, dy, off_center_x, off_center_y,
+                      "Volume_Fraction", "Normals"
+                      )
 
 
 if __name__ == '__main__':
