@@ -1,6 +1,7 @@
 import numpy as np
 from sympy import symbols, diff
 import math
+import csv
 
 
 def get_params():
@@ -46,27 +47,6 @@ def inside_ellipse(x, y, a, b, cx, cy, dx, dy):
     else:
         return False
 
-
-"""
-def func_ellipse_bottom(x,a,b,cx,cy):
-    if abs(x - cx) > a:
-        return 100000
-    root = 1 - ((x-cx) ** 2) / (a ** 2)
-    y = cy - (b * math.sqrt(root))
-    return y
-def func_ellipse_inverse_left(y,a,b,cx,cy):
-    if abs(y - cy) > b:
-        return 100000
-    root = 1 - ((y-cy) ** 2) / (b ** 2)
-    x = cx - (a * math.sqrt(root))
-    return x
-def func_ellipse_inverse_right(y,a,b,cx,cy):
-    if abs(y - cy) > b:
-        return -100000
-    root = 1 - ((y-cy) ** 2) / (b ** 2)
-    x = cx + (a * math.sqrt(root))
-    return x
-"""
 
 
 def simpson(func, a, b, bottom_y, y_cell, dx, dy):
@@ -418,26 +398,26 @@ def normal(x_cell, y_cell, i, j, classificacao):
     else:
         return 0, 0
 
+
 def curvature(x_cell, y_cell, i, j, classificacao, normals):
     x = symbols('x')
     y = symbols('y')
     params = get_params()
-    f_x = params[3] + params[1] * math.sqrt(1 - ((x - params[2])**2) / params[0]**2)
-    f_y = params[2] + params[0] * math.sqrt(1 - ((y - params[3])**2) / params[1]**2)
+    f_x = params[3] + params[1] * (1 - ((x - params[2]) ** 2) / params[0] ** 2) ** (0.5)
+    f_y = params[2] + params[0] * (1 - ((y - params[3]) ** 2) / params[1] ** 2) ** (0.5)
     df_dx = diff(f_x, x)
     df_dy = diff(f_y, y)
     ddf_ddx = diff(df_dx, x)
     ddf_ddy = diff(df_dy, y)
 
     if classificacao[i, j] == 'I':
-        if normals[i, j][0] > normals[i, j][1]:
-            return (ddf_ddx.subs({x: x_cell}))/ ((1 + (df_dx.subs({x: x_cell})**2)) ** (3 / 2))
+        if normals[i, j][0] < normals[i, j][1]:
+            return (abs(ddf_ddx.subs({x: x_cell}))) / ((1 + (df_dx.subs({x: x_cell}) ** 2)) ** (3 / 2))
         else:
-            return (ddf_ddy.subs({y: y_cell})) / ((1 + (df_dy.subs({y: y_cell}) ** 2)) ** (3 / 2))
-    
+            return (abs(ddf_ddy.subs({y: y_cell}))) / ((1 + (df_dy.subs({y: y_cell}) ** 2)) ** (3 / 2))
+
     else:
         return 0
-
 
 
 def salvar_vtk_celula(
@@ -445,6 +425,7 @@ def salvar_vtk_celula(
         campo_cell_type: np.ndarray,
         campo_escalar: np.ndarray,
         campo_vetorial: np.ndarray,
+        campo_curvature: np.ndarray,
         nx: int,
         ny: int,
         dx: float,
@@ -530,10 +511,49 @@ def salvar_vtk_celula(
                 else:
                     print("Error save vtk\n")
 
+            f.write(f"SCALARS curvature float 1\n")
+            f.write("LOOKUP_TABLE default\n")
+            campo_achatado = campo_curvature.flatten(order='C')
+            for valor in campo_achatado:
+                f.write(f"{valor}\n")
+
         print(f"Arquivo '{caminho_arquivo}' salvo com sucesso!")
 
     except IOError as e:
         print(f"Erro ao escrever o arquivo '{caminho_arquivo}': {e}")
+
+
+def save_csv(vof, normals, kappa, i, j, n_x, n_y, writer):
+    data_row = ['-1', '-1', '-1', '-1', '-1', '-1', '-1', '-1', '-1', '-1', '-1', '-1']
+    if i != 0:
+        if j != 0:
+            data_row[0] = vof[i - 1, j - 1]
+        data_row[1] = vof[i - 1, j]
+        if j != n_x - 1:
+            data_row[2] = vof[i - 1, j + 1]
+
+    if i != n_y - 1:
+        if j != 0:
+            data_row[6] = vof[i + 1, j - 1]
+        data_row[7] = vof[i + 1, j]
+        if j != n_x - 1:
+            data_row[8] = vof[i + 1, j + 1]
+
+    if j != 0:
+        data_row[3] = vof[i, j - 1]
+
+    data_row[4] = vof[i, j]
+
+    if j != n_x - 1:
+        data_row[5] = vof[i, j + 1]
+
+    data_row[9] = normals[i, j][0]
+    data_row[10] = normals[i, j][1]
+    data_row[11] = kappa[i, j]
+
+    writer.writerow(data_row)
+
+
 
 
 def inicio():
@@ -547,12 +567,13 @@ def inicio():
     #               dx
     dx = 0.25
     dy = 0.25
-    n_x = 100
-    n_y = 100
-    off_center_x = -12.5
-    off_center_y = -12.5
+    n_x = 20
+    n_y = 20
+    off_center_x = 0
+    off_center_y = 0
     matrix = np.zeros((n_y, n_x))
     normals = np.empty((n_y, n_x), dtype='object')
+    kappa = np.zeros((n_y, n_x))  # curvature
 
     for i in range(n_y):
         for j in range(n_x):
@@ -574,7 +595,24 @@ def inicio():
     print(classificacao_matrix)
     print(normals)
 
-    salvar_vtk_celula("output.vtk", classificacao_matrix, matrix, normals, n_x, n_y, dx, dy, off_center_x, off_center_y,
+
+    for i in range(n_y):
+        for j in range(n_x):
+            x_center_of_cell = ((dx * j) + dx / 2) + off_center_x
+            y_center_of_cell = ((dy * i) + dy / 2) + off_center_y
+            kappa[i, j] = curvature(x_center_of_cell, y_center_of_cell, i, j, classificacao_matrix, normals)
+
+    print(kappa)
+
+    file = open('data.csv', mode='a', newline='')
+    writer = csv.writer(file)
+    for i in range(n_y):
+        for j in range(n_x):
+            if classificacao_matrix[i, j] == 'I':
+                save_csv(matrix, normals, kappa, i, j, n_x, n_y, writer)
+
+    salvar_vtk_celula("output.vtk", classificacao_matrix, matrix, normals, kappa, n_x, n_y, dx, dy, off_center_x,
+                      off_center_y,
                       "Volume_Fraction", "Normals"
                       )
 
