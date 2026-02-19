@@ -566,8 +566,8 @@ def inicio(writer):
     #               dx
     dx = 0.05
     dy = 0.05
-    n_x = 128
-    n_y = 128
+    n_x = math.ceil(2 * a/dx) + 2
+    n_y = math.ceil(2 * b/dy) + 2
     off_center_x = 0
     off_center_y = 0
     matrix = np.zeros((n_y, n_x))
@@ -616,12 +616,13 @@ def inicio(writer):
     #                  off_center_y,
     #                  "Volume_Fraction", "Normals"
     #                  )
-    print("ok")
 
 
 if __name__ == '__main__':
     file = open("data.csv", "w", newline="")
     cswriter = csv.writer(file)
+    validation = open("validation.csv", "w", newline="")
+    csvalwriter = csv.writer(validation)
 
     cswriter.writerow([
         "v00", "v01", "v02",
@@ -630,11 +631,22 @@ if __name__ == '__main__':
         "normalx", "normaly", "kappa"
     ])
 
+    csvalwriter.writerow([
+        "v00", "v01", "v02",
+        "v10", "v11", "v12",
+        "v20", "v21", "v22",
+        "normalx", "normaly", "kappa"
+    ])
+
     for i in range (1000):
-        cx = np.random.uniform(1.0, 4.0)
-        cy = np.random.uniform(1.0, 4.0)
-        a = np.random.uniform(0.2, 2.0)
-        b = np.random.uniform(0.2, 2.0)
-        inicio(cswriter)
+        a = np.random.uniform(1, 10)
+        b = np.random.uniform(1, 10)
+        cx = int(math.ceil(a))
+        cy = int(math.ceil(b))
+        if i % 5 == 0:
+            inicio(csvalwriter)
+        else:
+            inicio(cswriter)
+        print(i)
 
 
