@@ -418,7 +418,7 @@ def curvature(x_cell, y_cell, i, j, classificacao, normals):
     else:
         return 0
 
-
+"""
 def salvar_vtk_celula(
         caminho_arquivo: str,
         campo_cell_type: np.ndarray,
@@ -434,7 +434,6 @@ def salvar_vtk_celula(
         nome_campo: str = "campo_escalar",
         nome_vetorial: str = "Normals"
 ):
-    """
     Salva um campo escalar 2D associado às células de uma malha estruturada
     regular em um arquivo de formato VTK (legacy ASCII).
 
@@ -450,7 +449,6 @@ def salvar_vtk_celula(
         cy (float): Coordenada y da origem da malha (canto inferior esquerdo).
         nome_campo (str, optional): Nome do campo escalar a ser salvo no arquivo VTK.
                                     Padrão é "campo_escalar".
-    """
     # Validação das dimensões do campo escalar
     num_celulas_y, num_celulas_x = campo_escalar.shape
     if num_celulas_x != nx or num_celulas_y != ny:
@@ -520,6 +518,92 @@ def salvar_vtk_celula(
 
     except IOError as e:
         print(f"Erro ao escrever o arquivo '{caminho_arquivo}': {e}")
+
+"""
+
+def salvar_vtk_celula(
+        caminho_arquivo: str,
+        campo_cell_type: np.ndarray,
+        campo_vof: np.ndarray,
+        campo_normais: np.ndarray,
+        campo_curvature: np.ndarray,
+        nx: int,
+        ny: int,
+        dx: float,
+        dy: float,
+        cx: float,
+        cy: float):
+
+    num_cells = nx * ny
+
+    with open(caminho_arquivo, "w") as f:
+
+        # Header
+        f.write("# vtk DataFile Version 3.0\n")
+        f.write("VOF ellipse debug\n")
+        f.write("ASCII\n")
+        f.write("DATASET STRUCTURED_GRID\n")
+
+        # Structured grid dimensions (POINTS)
+        f.write(f"DIMENSIONS {nx+1} {ny+1} 1\n")
+
+        # Write grid points
+        f.write(f"POINTS {(nx+1)*(ny+1)} float\n")
+
+        for j in range(ny+1):
+            for i in range(nx+1):
+                x = cx + i*dx
+                y = cy + j*dy
+                f.write(f"{x} {y} 0.0\n")
+
+        # Cell data
+        f.write(f"\nCELL_DATA {num_cells}\n")
+
+        # -------------------------
+        # VOF scalar
+        # -------------------------
+        f.write("SCALARS VOF float 1\n")
+        f.write("LOOKUP_TABLE default\n")
+
+        for val in campo_vof.flatten(order='C'):
+            f.write(f"{val}\n")
+
+        # -------------------------
+        # Cell type (I/F/V)
+        # -------------------------
+        f.write("\nSCALARS CellType int 1\n")
+        f.write("LOOKUP_TABLE default\n")
+
+        for val in campo_cell_type.flatten(order='C'):
+            if val == 'I':
+                f.write("2\n")
+            elif val == 'F':
+                f.write("1\n")
+            else:
+                f.write("0\n")
+
+        # -------------------------
+        # Normals
+        # -------------------------
+        f.write("\nVECTORS Normals float\n")
+
+        flat_normals = campo_normais.flatten(order='C')
+        for n in flat_normals:
+            if isinstance(n, tuple):
+                f.write(f"{n[0]} {n[1]} 0.0\n")
+            else:
+                f.write("0.0 0.0 0.0\n")
+
+        # -------------------------
+        # Curvature
+        # -------------------------
+        f.write("\nSCALARS Curvature float 1\n")
+        f.write("LOOKUP_TABLE default\n")
+
+        for val in campo_curvature.flatten(order='C'):
+            f.write(f"{val}\n")
+
+    print(f"{caminho_arquivo} saved.")
 
 
 def save_csv(vof, normals, kappa, i, j, n_x, n_y, writer):
@@ -607,15 +691,26 @@ def inicio(writer):
 
     #print(kappa)
 
-    for i in range(n_y):
-        for j in range(n_x):
-            if classificacao_matrix[i, j] == 'I':
-                save_csv(matrix, normals, kappa, i, j, n_x, n_y, writer)
-
-    #salvar_vtk_celula("output.vtk", classificacao_matrix, matrix, normals, kappa, n_x, n_y, dx, dy, off_center_x,
-    #                  off_center_y,
-    #                  "Volume_Fraction", "Normals"
-    #                  )
+#    for i in range(n_y):
+#        for j in range(n_x):
+#            if classificacao_matrix[i, j] == 'I':
+#                save_csv(matrix, normals, kappa, i, j, n_x, n_y, writer)
+    if np.isinf(matrix).any():
+        print("found")
+        matrix[np.isinf(matrix)] = -999
+        salvar_vtk_celula(
+            "debug_output.vtk",
+            classificacao_matrix,
+            matrix,
+            normals,
+            kappa,
+            n_x,
+            n_y,
+            dx,
+            dy,
+            off_center_x,
+            off_center_y
+        )
 
 
 if __name__ == '__main__':
@@ -641,8 +736,8 @@ if __name__ == '__main__':
     for i in range (1000):
         a = np.random.uniform(1, 10)
         b = np.random.uniform(1, 10)
-        cx = int(math.ceil(a))
-        cy = int(math.ceil(b))
+        cx = a
+        cy = b
         if i % 5 == 0:
             inicio(csvalwriter)
         else:
